@@ -59,8 +59,8 @@ checked against the same thing.
 | `*.test.md` | Which cases prove the BC, and how is the suite arranged? | New behaviour not in the BC |
 | Code + tests | What does it actually do right now? | — |
 
-One project has one design doc and many BCs. A BC has zero or more specs. Most BCs need no spec at
-all.
+One project has one design doc and many BCs. A BC has zero or more specs. The spec reveals required
+implementation detail.
 
 ## 3. Behaviours and IDs
 
