@@ -59,8 +59,8 @@ checked against the same thing.
 | `*.test.md` | Which cases prove the BC, and how is the suite arranged? | New behaviour not in the BC |
 | Code + tests | What does it actually do right now? | — |
 
-One project has one design doc and many BCs. A BC has zero or more specs. The spec reveals required
-implementation detail.
+One project has one design doc and many BCs. A BC has zero or more specs. Most BCs need no spec at
+all.
 
 ## 3. Behaviours and IDs
 
@@ -79,33 +79,36 @@ of a change list, an iteration, and a release note.
 Format: `BH-<SLUG>` (example: `BH-AUTH`). Stable once issued; do not reuse a retired ID for a
 different behaviour.
 
-**Case ID** — one observable outcome inside that BC. Lives only in the BC. Maps to the test that
-proves it.
+**Minor behaviour ID** — a capability that helps complete its BC. Lives only in the BC. Maps to
+the tests (and, where relevant, the client work) that prove it. Not one HTTP status; not a class
+name. A BC is a set of these. Examples: "users can sign up and receive a session token"; "the
+events API lets an owner create and list their events"; "the Android event screens group by topic."
 
-Format: `<SLUG>-<TOKEN>` where `<SLUG>` matches the behaviour (example: `AUTH-L2`). Stable once
-issued; do not reuse a retired ID for a different case.
+Format: `<SLUG>-<NN>` where `<SLUG>` matches the parent behaviour (example: `EVENTS-01`,
+`AUTH-01`). Stable once issued; do not reuse a retired ID.
 
 ```
-design.md  [BH-AUTH]  "owners have accounts and sessions"
-    └── auth.bc.md
-          ├── [AUTH-L1] login success  →  Login_AfterSignup_ReturnsToken
-          ├── [AUTH-L2] wrong password →  Login_WrongPassword_ReturnsUnauthorized
-          └── ...
+design.md  [BH-EVENTS]  "owners create events, log entries, group by optional topic"
+    └── events.bc.md
+          ├── [EVENTS-01] create event, topic is an optional tag     →  API tests
+          ├── [EVENTS-02] list / read / delete only my events        →  API tests
+          ├── [EVENTS-03] tap-to-log and timeline                    →  API tests
+          ├── [EVENTS-04] session-bound; other owners' ids are 404   →  API tests
+          └── [EVENTS-05] Android screens grouped by topic           →  (client)
 ```
 
-A change list and a release name **BH-AUTH**. CI and review ask whether every **AUTH-*** case still
-has a test. Case IDs do not appear in the design doc, a changelog, or a ticket unless the change
-really is that one outcome.
+A change list and a release name **BH-EVENTS**. Completing the BC means every minor behaviour in it
+is done. CI asks whether every **EVENTS-*** on a done BC still has a proving test. Route-level
+success and failure stay as *detail under* the minor behaviour, not as their own IDs.
 
 A BC with no matching behaviour ID in the design doc means one of the two is wrong. A behaviour ID
 with no BC is a planned slice, not an implemented one.
 
-Tests declare the case ID they prove. The mechanical check is a test in the suite: it reads the
-design-doc catalogue for BCs marked `done`, reads every `*.bc.md` for case IDs, and reflects over
-the test assembly for the declarations. It fails when a done case has no test, or a test names an
-ID that is not in any BC. That proves coverage of the contract, not that the assertions are
-philosophically correct — but it turns "did we implement what we contracted?" into something you
-can run. BCs that are not `done` are not required to have tests yet.
+Tests declare the minor-behaviour ID they prove. The mechanical check is a test in the suite: it
+reads the design-doc catalogue for BCs marked `done`, reads every `*.bc.md` for those IDs, and
+reflects over the test assembly for the declarations. It fails when a done minor behaviour has no
+test, or a test names an ID that is not in any BC. BCs that are not `done` are not required to have
+tests yet.
 
 ## 4. Precedence, and the amendment protocol
 
