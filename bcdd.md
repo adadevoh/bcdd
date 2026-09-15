@@ -11,7 +11,8 @@ of product, stack, and domain detail. Copy it to the root of a repo unmodified.
 
 Everything that varies lives in the project's own artifacts:
 
-- the product, domain, stack, and guardrails → `<project>.design.md`
+- the product, domain, stack, guardrails, and (when there is one) the deployment strategy →
+  `<project>.design.md`
 - the observable behaviour of each slice → `bc/<slice>/<slice>.bc.md`
 - the mechanism, where mechanism needs agreeing → `*.spec.md`
 
@@ -44,7 +45,8 @@ checked against the same thing.
 ## 2. The artifact hierarchy
 
 ```
-<project>.design.md          product, domain, flows, guardrails, behaviours, iteration plan
+<project>.design.md          product, domain, flows, guardrails, behaviours, iteration plan,
+                             deployment strategy
   └── bc/<slice>/<slice>.bc.md              observable behaviour for one slice
         ├── bc/<slice>/<slice>.<topic>.spec.md   0..N — how, when how needs agreeing
         └── bc/<slice>/<slice>.test.md           0..1 — only when tests are handed off
@@ -53,7 +55,7 @@ checked against the same thing.
 
 | Artifact | Answers | Never contains |
 | --- | --- | --- |
-| `*.design.md` | What are we building and why? What is true of the product? | Operation-level detail: exact inputs, results, error codes |
+| `*.design.md` | What are we building and why? What is true of the product? How is it shipped? | Operation-level detail: exact inputs, results, error codes |
 | `*.bc.md` | What does a caller observe? | Class names, libraries, schema |
 | `*.spec.md` | How is it built? | Behaviour, result codes, product rules |
 | `*.test.md` | Which cases prove the BC, and how is the suite arranged? | New behaviour not in the BC |
@@ -271,7 +273,30 @@ because they cut across every BC. Keep them in these groups:
 Write them as prohibitions with reasons. "Do not X" is followed nine times out of ten. "Do not X,
 because Y" is followed the tenth time too, when the rule is inconvenient.
 
-## 11. Iterations and definition of done
+## 11. Deployment strategy belongs in the design doc
+
+A design doc may also carry a **deployment strategy**: how this product is released, to where, and
+what "shipped" means. It is optional. Write it when the project has a real destination; skip it
+while the work still lives only on a laptop.
+
+It lives here, not in a BC and not in a spec, because it cuts across every slice. A BC describes
+what a caller observes. A spec decides the mechanism of one slice — including a migration that
+belongs to that slice. Neither is the place to name environments, a pipeline, a rollback rule, or
+which host is production.
+
+When you write one, keep it to decisions a later reader cannot infer:
+
+- **Destination** — where the running system lives, and which environments exist.
+- **Release path** — how a done iteration becomes the thing in that destination.
+- **Rollback** — what happens when a release is wrong.
+- **What "shipped" means** — the check that the behaviour catalogue's `done` IDs are actually
+  reachable in the destination, not only green in CI.
+
+Do not turn it into a runbook. Hostnames that change, pipeline YAML, and click-by-click console
+steps are mechanism, and they drift. The design doc records the strategy; the pipeline is the
+executable truth of that strategy, the same way code is the executable truth of a BC.
+
+## 12. Iterations and definition of done
 
 The design doc carries an iteration plan, and **an iteration is a set of behaviours**. Each
 behaviour is listed with its ID, its BC, and its status. Slices small enough to finish beat slices
@@ -292,7 +317,7 @@ checks catch drift that green tests cannot see — a case ID with no test, a tes
 retired ID, a stale migration, a stub left in a finished slice. Never make a change look green by
 removing what proves it.
 
-## 12. Anti-patterns
+## 13. Anti-patterns
 
 - **The same fact in six places.** The most likely failure of this method. Every fact has exactly
   one home: product in the design doc, behaviour in the BC, mechanism in the spec. Everything else
@@ -311,12 +336,14 @@ removing what proves it.
 - **Amending the contract quietly to match what you built.** The contract exists precisely to make
   that a conversation.
 - **Reusing a retired ID.** The trace from an old release to a test then points at the wrong thing.
+- **Deployment steps in a BC or a spec.** The strategy lives in the design doc. Pipeline YAML is
+  the executable truth of that strategy.
 
-## 13. Starting a new repo
+## 14. Starting a new repo
 
 1. Write `<project>.design.md`: the product, the domain objects, the flows, a **behaviour catalogue
-   with IDs**, the guardrails, an iteration plan naming those IDs, and this project's unimplemented
-   signal.
+   with IDs**, the guardrails, an iteration plan naming those IDs, this project's unimplemented
+   signal, and a deployment strategy if the product has a destination.
 2. Copy this file to the repo root, unmodified.
 3. For the first iteration, write each BC under `bc/<slice>/<slice>.bc.md`, each stating the
    behaviour ID it implements and assigning a case ID to every observable outcome.
@@ -330,7 +357,7 @@ removing what proves it.
 8. When an assumption breaks, amend the document first (§4).
 9. Keep the README pointing at the design doc rather than restating it.
 
-## 14. A BC in miniature
+## 15. A BC in miniature
 
 One example, for an HTTP service. The shape of the sections carries over to any surface; the routes
 and status codes are what that surface happens to use.
