@@ -7,7 +7,10 @@ are the content.
 ## 0. Status of this document
 
 **This file does not change from project to project.** It is the method, and it is deliberately free
-of product, stack, and domain detail. Copy it to the root of a repo unmodified.
+of product, stack, and domain detail. A consuming project includes or references this file at the
+start of development so humans and agents can follow it. Typical forms: a README link, an
+agent/editor rule that fetches this document, a submodule. Do not copy it into the project in
+order to edit it, and do not keep a project-specific fork.
 
 Everything that varies lives in the project's own artifacts:
 
@@ -57,12 +60,17 @@ checked against the same thing.
 | --- | --- | --- |
 | `*.design.md` | What are we building and why? What is true of the product? How is it shipped? | Operation-level detail: exact inputs, results, error codes |
 | `*.bc.md` | What does a caller observe? | Class names, libraries, schema |
-| `*.spec.md` | How is it built? | Behaviour, result codes, product rules |
+| `*.spec.md` | How is it built? | New behaviour absent from the BC |
 | `*.test.md` | Which cases prove the BC, and how is the suite arranged? | New behaviour not in the BC |
 | Code + tests | What does it actually do right now? | — |
 
 One project has one design doc and many BCs. A BC has zero or more specs. Most BCs need no spec at
 all.
+
+Lower files may repeat the design doc. A BC or spec that restates a product rule first written in
+`*.design.md` is applying that rule, not inventing a second home for it. The design doc still wins
+on product questions (§4). What to avoid is a *new* fact appearing in two sibling places — two BCs,
+or a spec inventing behaviour the BC does not have.
 
 ## 3. Behaviours and IDs
 
@@ -236,8 +244,10 @@ A spec contains: the decisions and what they rule out, the file layout, the sche
 configuration and where it comes from, local setup steps, the test topology, and pointers to the
 BC's case IDs — not a restated case list.
 
-A spec never restates behaviour. If a result code appears in both a BC and its spec, delete it from
-the spec. **Duplicated facts drift**, and the copy that drifts is always the one you read.
+A spec may repeat product facts from the design doc — clocks, named routes, operational rules —
+so the mechanism file can be read on its own. Do not delete a design fact from a spec merely
+because the design doc already said it. A spec must not invent behaviour the parent BC does not
+have, and it should point at the BC's IDs rather than copy the case list.
 
 Skip the spec when the slice only adds operations over machinery already decided. Most do.
 
@@ -319,13 +329,14 @@ removing what proves it.
 
 ## 13. Anti-patterns
 
-- **The same fact in six places.** The most likely failure of this method. Every fact has exactly
-  one home: product in the design doc, behaviour in the BC, mechanism in the spec. Everything else
-  points at it.
+- **A new fact in six places.** Product lives in the design doc, behaviour in the BC, mechanism in
+  the spec. Lower files *may* repeat the design doc. What drifts is a fact invented twice at the
+  same layer, or a spec that silently owns behaviour the BC never stated.
 - **Case IDs in the design doc.** The design doc lists behaviours. Cases live in the BC.
 - **A BC that names classes.** It is a spec wearing a BC's name, and it will forbid refactors that
   the contract does not care about.
-- **A spec that restates behaviour.** See above about drift.
+- **A spec that copies the BC's case list.** Pointers are enough. Repeating the design doc is not
+  this anti-pattern.
 - **Sketch result codes in a contract.** Placeholders from a first draft become the thing an
   implementer builds.
 - **Prompt files pretending to be artifacts.** If nothing reads it but an agent, once, it is a
@@ -344,7 +355,8 @@ removing what proves it.
 1. Write `<project>.design.md`: the product, the domain objects, the flows, a **behaviour catalogue
    with IDs**, the guardrails, an iteration plan naming those IDs, this project's unimplemented
    signal, and a deployment strategy if the product has a destination.
-2. Copy this file to the repo root, unmodified.
+2. Include or reference this file at the start of development so humans and agents can follow it.
+   Do not copy it into the repo in order to change it.
 3. For the first iteration, write each BC under `bc/<slice>/<slice>.bc.md`, each stating the
    behaviour ID it implements and assigning a case ID to every observable outcome.
 4. Add a spec only for slices where the mechanism needs deciding.
