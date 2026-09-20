@@ -51,9 +51,9 @@ checked against the same thing.
 <project>.design.md          product, domain, flows, guardrails, behaviours, iteration plan,
                              deployment strategy
   └── bc/<slice>/<slice>.bc.md              observable behaviour for one slice
-        ├── bc/<slice>/<slice>.<topic>.spec.md   0..N — how, when how needs agreeing
-        └── bc/<slice>/<slice>.test.md           0..1 — only when tests are handed off
-              └── code + tests                   executable truth
+        ├─── bc/<slice>/<slice>.<topic>.spec.md   0..N — how, when how needs agreeing
+        └─── bc/<slice>/<slice>.test.md           0..1 — only when tests are handed off
+              └─── code + tests                   executable truth
 ```
 
 | Artifact | Answers | Never contains |
@@ -98,11 +98,11 @@ Format: `<SLUG>-<NN>` where `<SLUG>` matches the parent behaviour (example: `EVE
 ```
 design.md  [BH-EVENTS]  "owners create events, log entries, group by optional topic"
     └── events.bc.md
-          ├── [EVENTS-01] create event, topic is an optional tag     →  API tests
-          ├── [EVENTS-02] list / read / delete only my events        →  API tests
-          ├── [EVENTS-03] tap-to-log and timeline                    →  API tests
-          ├── [EVENTS-04] session-bound; other owners' ids are 404   →  API tests
-          └── [EVENTS-05] Android screens grouped by topic           →  (client)
+          ├─── [EVENTS-01] create event, topic is an optional tag     →  API tests
+          ├─── [EVENTS-02] list / read / delete only my events        →  API tests
+          ├─── [EVENTS-03] tap-to-log and timeline                    →  API tests
+          ├─── [EVENTS-04] session-bound; other owners' ids are 404   →  API tests
+          └─── [EVENTS-05] Android screens grouped by topic           →  (client)
 ```
 
 A change list and a release name **BH-EVENTS**. Completing the BC means every minor behaviour in it
