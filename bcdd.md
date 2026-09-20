@@ -67,10 +67,8 @@ checked against the same thing.
 One project has one design doc and many BCs. A BC has zero or more specs. Most BCs need no spec at
 all.
 
-Lower files may repeat the design doc. A BC or spec that restates a product rule first written in
-`*.design.md` is applying that rule, not inventing a second home for it. The design doc still wins
-on product questions (§4). What to avoid is a *new* fact appearing in two sibling places — two BCs,
-or a spec inventing behaviour the BC does not have.
+Lower files may repeat a behaviour from `*.design.md`. A `*.bc.md` does that to expound the
+behaviour. A `*.spec.md` or `*.test.md` does that to go into implementation detail.
 
 ## 3. Behaviours and IDs
 
@@ -242,12 +240,8 @@ hard to reverse.
 
 A spec contains: the decisions and what they rule out, the file layout, the schema, error mapping,
 configuration and where it comes from, local setup steps, the test topology, and pointers to the
-BC's case IDs — not a restated case list.
-
-A spec may repeat product facts from the design doc — clocks, named routes, operational rules —
-so the mechanism file can be read on its own. Do not delete a design fact from a spec merely
-because the design doc already said it. A spec must not invent behaviour the parent BC does not
-have, and it should point at the BC's IDs rather than copy the case list.
+BC's case IDs — not a restated case list. It may repeat the design doc to go into implementation
+detail (§2).
 
 Skip the spec when the slice only adds operations over machinery already decided. Most do.
 
@@ -329,14 +323,11 @@ removing what proves it.
 
 ## 13. Anti-patterns
 
-- **A new fact in six places.** Product lives in the design doc, behaviour in the BC, mechanism in
-  the spec. Lower files *may* repeat the design doc. What drifts is a fact invented twice at the
-  same layer, or a spec that silently owns behaviour the BC never stated.
+- **The same fact in six places.** A new fact has one home. Repeating a behaviour from the design
+  doc in a BC, spec, or test doc is not this anti-pattern (§2).
 - **Case IDs in the design doc.** The design doc lists behaviours. Cases live in the BC.
 - **A BC that names classes.** It is a spec wearing a BC's name, and it will forbid refactors that
   the contract does not care about.
-- **A spec that copies the BC's case list.** Pointers are enough. Repeating the design doc is not
-  this anti-pattern.
 - **Sketch result codes in a contract.** Placeholders from a first draft become the thing an
   implementer builds.
 - **Prompt files pretending to be artifacts.** If nothing reads it but an agent, once, it is a
