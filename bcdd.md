@@ -7,7 +7,10 @@ are the content.
 ## 0. Status of this document
 
 **This file does not change from project to project.** It is the method, and it is deliberately free
-of product, stack, and domain detail. Copy it to the root of a repo unmodified.
+of product, stack, and domain detail. A consuming project includes or references this file at the
+start of development so humans and agents can follow it. Typical forms: a README link, an
+agent/editor rule that fetches this document, a submodule. Do not copy it into the project in
+order to edit it, and do not keep a project-specific fork.
 
 Everything that varies lives in the project's own artifacts:
 
@@ -344,7 +347,8 @@ removing what proves it.
 1. Write `<project>.design.md`: the product, the domain objects, the flows, a **behaviour catalogue
    with IDs**, the guardrails, an iteration plan naming those IDs, this project's unimplemented
    signal, and a deployment strategy if the product has a destination.
-2. Copy this file to the repo root, unmodified.
+2. Include or reference this file at the start of development so humans and agents can follow it.
+   Do not copy it into the repo in order to change it.
 3. For the first iteration, write each BC under `bc/<slice>/<slice>.bc.md`, each stating the
    behaviour ID it implements and assigning a case ID to every observable outcome.
 4. Add a spec only for slices where the mechanism needs deciding.
