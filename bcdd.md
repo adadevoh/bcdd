@@ -51,21 +51,26 @@ checked against the same thing.
 <project>.design.md          product, domain, flows, guardrails, behaviours, iteration plan,
                              deployment strategy
   └── bc/<slice>/<slice>.bc.md              observable behaviour for one slice
-        ├── bc/<slice>/<slice>.<topic>.spec.md   0..N — how, when how needs agreeing
-        └── bc/<slice>/<slice>.test.md           0..1 — only when tests are handed off
-              └── code + tests                   executable truth
+        ├─── bc/<slice>/<slice>.<topic>.spec.md   0..N — how, when how needs agreeing
+        └─── bc/<slice>/<slice>.test.md           0..1 — only when tests are handed off
+              └─── code + tests                   executable truth
 ```
 
 | Artifact | Answers | Never contains |
 | --- | --- | --- |
 | `*.design.md` | What are we building and why? What is true of the product? How is it shipped? | Operation-level detail: exact inputs, results, error codes |
 | `*.bc.md` | What does a caller observe? | Class names, libraries, schema |
-| `*.spec.md` | How is it built? | Behaviour, result codes, product rules |
+| `*.spec.md` | How is it built? | New behaviour absent from the BC |
 | `*.test.md` | Which cases prove the BC, and how is the suite arranged? | New behaviour not in the BC |
 | Code + tests | What does it actually do right now? | — |
 
 One project has one design doc and many BCs. A BC has zero or more specs. Most BCs need no spec at
 all.
+
+Lower files may repeat the design doc. A BC or spec that restates a product rule first written in
+`*.design.md` is applying that rule, not inventing a second home for it. The design doc still wins
+on product questions (§4). What to avoid is a *new* fact appearing in two sibling places — two BCs,
+or a spec inventing behaviour the BC does not have.
 
 ## 3. Behaviours and IDs
 
@@ -95,11 +100,11 @@ Format: `<SLUG>-<NN>` where `<SLUG>` matches the parent behaviour (example: `EVE
 ```
 design.md  [BH-EVENTS]  "owners create events, log entries, group by optional topic"
     └── events.bc.md
-          ├── [EVENTS-01] create event, topic is an optional tag     →  API tests
-          ├── [EVENTS-02] list / read / delete only my events        →  API tests
-          ├── [EVENTS-03] tap-to-log and timeline                    →  API tests
-          ├── [EVENTS-04] session-bound; other owners' ids are 404   →  API tests
-          └── [EVENTS-05] Android screens grouped by topic           →  (client)
+          ├─── [EVENTS-01] create event, topic is an optional tag     →  API tests
+          ├─── [EVENTS-02] list / read / delete only my events        →  API tests
+          ├─── [EVENTS-03] tap-to-log and timeline                    →  API tests
+          ├─── [EVENTS-04] session-bound; other owners' ids are 404   →  API tests
+          └─── [EVENTS-05] Android screens grouped by topic           →  (client)
 ```
 
 A change list and a release name **BH-EVENTS**. Completing the BC means every minor behaviour in it
@@ -239,8 +244,10 @@ A spec contains: the decisions and what they rule out, the file layout, the sche
 configuration and where it comes from, local setup steps, the test topology, and pointers to the
 BC's case IDs — not a restated case list.
 
-A spec never restates behaviour. If a result code appears in both a BC and its spec, delete it from
-the spec. **Duplicated facts drift**, and the copy that drifts is always the one you read.
+A spec may repeat product facts from the design doc — clocks, named routes, operational rules —
+so the mechanism file can be read on its own. Do not delete a design fact from a spec merely
+because the design doc already said it. A spec must not invent behaviour the parent BC does not
+have, and it should point at the BC's IDs rather than copy the case list.
 
 Skip the spec when the slice only adds operations over machinery already decided. Most do.
 
@@ -322,13 +329,14 @@ removing what proves it.
 
 ## 13. Anti-patterns
 
-- **The same fact in six places.** The most likely failure of this method. Every fact has exactly
-  one home: product in the design doc, behaviour in the BC, mechanism in the spec. Everything else
-  points at it.
+- **A new fact in six places.** Product lives in the design doc, behaviour in the BC, mechanism in
+  the spec. Lower files *may* repeat the design doc. What drifts is a fact invented twice at the
+  same layer, or a spec that silently owns behaviour the BC never stated.
 - **Case IDs in the design doc.** The design doc lists behaviours. Cases live in the BC.
 - **A BC that names classes.** It is a spec wearing a BC's name, and it will forbid refactors that
   the contract does not care about.
-- **A spec that restates behaviour.** See above about drift.
+- **A spec that copies the BC's case list.** Pointers are enough. Repeating the design doc is not
+  this anti-pattern.
 - **Sketch result codes in a contract.** Placeholders from a first draft become the thing an
   implementer builds.
 - **Prompt files pretending to be artifacts.** If nothing reads it but an agent, once, it is a
