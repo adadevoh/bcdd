@@ -36,10 +36,23 @@ restart, who is allowed to see what. It says nothing about classes, layers, or l
 
 The behaviour is the behaviour. Its implementation is a detail.
 
-BCDD is TDD/BDD's instinct — describe the behaviour before you build it — formalised into a durable
-artifact that lives in the repo beside the code and changes in lock step with it. A BDD scenario
-lives inside a test file and is discovered by reading the suite. A BC is agreed *before* either the
-implementation or the tests exist, and it outlives any particular test.
+**BCDD implies TDD/BDD, DDD, and design contracts.** It does not replace them, and it does not make
+them optional. It is how those practices are bound together so they survive contact with more than
+one implementer.
+
+- **TDD/BDD** — describe the behaviour before you build it, and prove it with tests that bind to
+  that description. BCDD's difference is where the description lives. A BDD scenario lives inside
+  a test file and is discovered by reading the suite. A BC is agreed *before* either the
+  implementation or the tests exist, and it outlives any particular test. The tests still come
+  from the behaviour, still fail on a missing case, and still declare the case IDs they prove.
+- **DDD** — the product has a domain, and that domain has a language. The design doc is where the
+  domain objects, flows, and ubiquitous language are fixed. A BC speaks that language. It does
+  not smuggle in classes, tables, or frameworks; those are not the domain.
+- **Design contracts** — every layer that can disagree is a contract, not a sketch. The design
+  doc is the product contract: what is true of this system. Each BC is a behaviour contract: what
+  a caller observes. Specs, when they exist, are mechanism contracts. Preconditions,
+  postconditions, and invariants are not an extra ceremony — they are the inputs, the results,
+  and the Rules section of the BC. A document that cannot be checked is not a contract.
 
 That single property is what makes BCDD worth the ceremony: because the contract exists outside the
 code, **any number of humans and agents can work from it at once**, and every one of them can be
@@ -65,7 +78,8 @@ checked against the same thing.
 | Code + tests | What does it actually do right now? | — |
 
 One project has one design doc and many BCs. A BC has zero or more specs. Most BCs need no spec at
-all.
+all. A newly reported bug is an exception: it generates a spec from its reproduction steps and the
+code state (§9).
 
 Lower files may repeat a behaviour from `*.design.md`. A `*.bc.md` does that to expound the
 behaviour. A `*.spec.md` or `*.test.md` does that to go into implementation detail.
@@ -236,16 +250,110 @@ point: BCDD is a single source of truth *between* stages of the SDLC, whoever ex
 
 Write a `*.spec.md` when the mechanism itself deserves a decision record. Signals: a new datastore,
 a new dependency, a schema, a migration strategy, a test topology, anything touching auth, anything
-hard to reverse.
+hard to reverse, a defect (§9).
 
 A spec contains: the decisions and what they rule out, the file layout, the schema, error mapping,
 configuration and where it comes from, local setup steps, the test topology, and pointers to the
 BC's case IDs — not a restated case list. It may repeat the design doc to go into implementation
-detail (§2).
+detail (§2). A bug spec additionally carries the reproduction steps and the code state at the
+report; those are the inputs that generate it, not a restatement of the BC.
 
-Skip the spec when the slice only adds operations over machinery already decided. Most do.
+Skip the spec when the slice only adds operations over machinery already decided. Most do. Do not
+skip it for a newly reported bug: the reproduction and the code state *are* the mechanism that
+needs agreeing.
 
-## 9. Test docs — only for a handoff
+## 9. Bugs — spec from the report, test from the spec
+
+A bug is a caller-observable result that is wrong. Wrong means it contradicts a BC, or it falls
+into a gap the BC never named. It is not a refactor request, and it is not a new slice.
+
+Handle it as a document change first, then a test, then a code change. The order is the amendment
+protocol (§4) with two extra artifacts: a spec generated from the report, and a test that would
+have failed on the broken behaviour.
+
+### Generate the spec from the report
+
+A newly reported bug generates a `*.spec.md`. The inputs are the bug information, not a theory of
+the fix:
+
+- **Reproduction steps** — the shortest sequence that makes a caller observe the wrong result,
+  written against the same surface the BC describes.
+- **Code state** — what the implementation actually does at the moment of the report: the path
+  taken, the result returned, the files and branches implicated. A snapshot of *now*. Name those
+  files and describe the behaviour; do not paste the implementation into the spec as a substitute
+  for describing it.
+
+Name the file for the defect (`sessions.revoked-token-survives-restart.spec.md`), not for a
+ticket. It is still a spec: it answers *how*, and it must not invent behaviour absent from the BC.
+
+Then classify, using the same rule as any contradiction:
+
+1. **The code contradicts the BC.** The BC stands. The spec records the defect and the mechanism
+   of the fix. Case IDs already exist.
+2. **The BC was wrong, or silent.** Amend the design doc and/or the BC first. Issue or retire case
+   IDs in the same step. Only then does the spec point at those IDs and record the fix.
+
+A spec that "fixes" a bug by declaring new behaviour is the silent contract change that §4
+forbids. The report is evidence; it is not a licence to skip the BC.
+
+If an existing test already reproduces the defect, do not write a second copy of the reproduction.
+Write the spec only when the *fix* still needs agreeing — same signal as any other spec. The
+existing test is already the proof.
+
+### The spec's shape
+
+Beyond what every spec carries (§8), a bug spec has:
+
+- **Reproduction** — the steps, exactly enough to fail.
+- **Observed (code state)** — the wrong result and why the current code produces it.
+- **Expected** — case IDs, each pointing at the BC. Not a restated case list; the IDs and the
+  one-line failure that was observed.
+- **Fix** — the mechanism decided, and what it rules out.
+
+```markdown
+# Sessions — bug: revoked token works after restart
+
+## Reproduction
+1. POST /auth/login → token T
+2. POST /auth/logout with T → 204
+3. Restart the process
+4. Call a session-bound operation with T
+
+## Observed (code state)
+Sessions live only in memory. Restart rebuilds an empty set. The revoked token still
+verifies as well-formed, and the handler accepts it. The caller gets success instead of
+401. [SESS-O1] and [SESS-R2] fail.
+
+## Expected
+- [SESS-O1] that token never works again
+- [SESS-R2] a revoked session stays revoked across a restart
+
+## Fix
+Persist revocations so a restart cannot resurrect a revoked token. Do not lengthen token
+TTL as a substitute. Do not treat an empty store after boot as "no sessions, so any
+well-formed token is fine."
+```
+
+### A fix without a proving test is not a fix
+
+**Every bug fix includes at least one test that validates the bug is fixed.** That test:
+
+- follows the reproduction steps against the surface the BC describes
+- declares the case ID(s) it proves
+- would have failed against the broken behaviour
+- passes in CI after the fix
+
+The spec's reproduction steps *are* the test plan. Do not wait for a `*.test.md` unless the test
+work is a handoff (§10).
+
+A change list that patches code and leaves the suite as it was has not closed the bug. The suite
+that did not catch it will not catch it again. Never skip, filter, or delete a test to make the
+fix look green.
+
+A **bug is done** when the spec, the BC, the proving test, and the code agree, and no
+unimplemented signal was introduced to hide the defect.
+
+## 10. Test docs — only for a handoff
 
 Write a `*.test.md` when the test work goes to a *different* agent or person than the
 implementation, and only then. It carries the case IDs derived from the BC, the fixture and
@@ -257,7 +365,7 @@ plan, and a second copy is the drift described above.
 A document that exists only to instruct an agent is a prompt, not an artifact. Prompts are worth
 committing when a long autonomous run depends on them. Otherwise they rot.
 
-## 10. Guardrails belong in the design doc
+## 11. Guardrails belong in the design doc
 
 Guardrails are the standing rules that bind humans and agents alike. They live in the design doc
 because they cut across every BC. Keep them in these groups:
@@ -267,8 +375,9 @@ because they cut across every BC. Keep them in these groups:
   what must fail to boot rather than start in a degraded state.
 - **Operational** — identity and authorisation rules, what must be enforced by the datastore rather
   than application code, how failures must surface, and what must never be reported as a success.
-- **Test** — where tests live, what a run may depend on, and that tests may not be skipped,
-  filtered, or deleted to make a change look green.
+- **Test** — where tests live, what a run may depend on, that a bug fix includes a test that
+  follows the reproduction steps (§9), and that tests may not be skipped, filtered, or deleted
+  to make a change look green.
 - **Engineering path** — the locked stack, fixed names, and the instruction to implement *this*
   iteration only, with the smallest change that lands the behaviour.
 - **Data and privacy** — what must be retained, what must be minimised, what may not appear in URLs
@@ -277,7 +386,7 @@ because they cut across every BC. Keep them in these groups:
 Write them as prohibitions with reasons. "Do not X" is followed nine times out of ten. "Do not X,
 because Y" is followed the tenth time too, when the rule is inconvenient.
 
-## 11. Deployment strategy belongs in the design doc
+## 12. Deployment strategy belongs in the design doc
 
 A design doc may also carry a **deployment strategy**: how this product is released, to where, and
 what "shipped" means. It is optional. Write it when the project has a real destination; skip it
@@ -300,7 +409,7 @@ Do not turn it into a runbook. Hostnames that change, pipeline YAML, and click-b
 steps are mechanism, and they drift. The design doc records the strategy; the pipeline is the
 executable truth of that strategy, the same way code is the executable truth of a BC.
 
-## 12. Iterations and definition of done
+## 13. Iterations and definition of done
 
 The design doc carries an iteration plan, and **an iteration is a set of behaviours**. Each
 behaviour is listed with its ID, its BC, and its status. Slices small enough to finish beat slices
@@ -314,15 +423,19 @@ A **BC is done** when:
 - the guardrails it touches are still true
 
 A **behaviour is done** when its BC is done. An **iteration is done** when every behaviour in it is
-done and the design doc says so.
+done and the design doc says so. A **bug is done** when its spec, the BC, a proving test that
+follows the reproduction steps, and the code agree (§9).
 
 CI is where the contract stops being a promise. It runs the full suite on every push, plus whatever
 checks catch drift that green tests cannot see — a case ID with no test, a test pointing at a
 retired ID, a stale migration, a stub left in a finished slice. Never make a change look green by
 removing what proves it.
 
-## 13. Anti-patterns
+## 14. Anti-patterns
 
+- **BCDD as a substitute for TDD, DDD, or design contracts.** It implies them (§1). A BC with no
+  proving tests, a design doc with no domain, or a sketch that cannot be checked is not this
+  method.
 - **The same fact in six places.** A new fact has one home. Repeating a behaviour from the design
   doc in a BC, spec, or test doc is not this anti-pattern (§2).
 - **Case IDs in the design doc.** The design doc lists behaviours. Cases live in the BC.
@@ -340,8 +453,13 @@ removing what proves it.
 - **Reusing a retired ID.** The trace from an old release to a test then points at the wrong thing.
 - **Deployment steps in a BC or a spec.** The strategy lives in the design doc. Pipeline YAML is
   the executable truth of that strategy.
+- **A bug fix with no regression test.** The suite that did not catch it will not catch it again.
+- **A silent code patch for a defect.** Generate the spec from the reproduction steps and the code
+  state first. A patch with no spec is a behaviour change that nobody agreed.
+- **A bug spec that adds behaviour.** The report is evidence. If the BC was silent, amend the BC,
+  then the spec.
 
-## 14. Starting a new repo
+## 15. Starting a new repo
 
 1. Write `<project>.design.md`: the product, the domain objects, the flows, a **behaviour catalogue
    with IDs**, the guardrails, an iteration plan naming those IDs, this project's unimplemented
@@ -357,10 +475,11 @@ removing what proves it.
    declare the case IDs they prove.
 7. Set up CI: full suite on every push, plus drift checks (including case-ID coverage once you
    have the check).
-8. When an assumption breaks, amend the document first (§4).
+8. When an assumption breaks, amend the document first (§4). When a bug is reported, generate the
+   spec from the reproduction steps and the code state, then a proving test, then the fix (§9).
 9. Keep the README pointing at the design doc rather than restating it.
 
-## 15. A BC in miniature
+## 16. A BC in miniature
 
 One example, for an HTTP service. The shape of the sections carries over to any surface; the routes
 and status codes are what that surface happens to use.
